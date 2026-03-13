@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trimr — URL Shortener</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@300;400;500&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f7f6f2;
+      --white: #ffffff;
+      --ink: #1a1a18;
+      --ink2: #3d3d38;
+      --muted: #9a998f;
+      --border: #e4e3dc;
+      --border2: #d0cfc6;
+      --accent: #2563eb;
+      --accent-light: #eff4ff;
+      --accent-hover: #1d4ed8;
+      --success: #16a34a;
+      --success-light: #f0fdf4;
+      --danger: #dc2626;
+      --danger-light: #fef2f2;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow: 0 4px 16px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
+      --radius: 14px;
+      --radius-sm: 8px;
+      --radius-xs: 6px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Geist', sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    nav {
+      position: sticky; top: 0;
+      background: rgba(247,246,242,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 50;
+      padding: 0 32px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-brand { display: flex; align-items: center; gap: 8px; text-decoration: none; }
+    .brand-mark {
+      width: 28px; height: 28px;
+      background: var(--ink);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--bg); font-size: 14px;
+    }
+    .brand-name { font-family: 'Instrument Serif', serif; font-size: 20px; color: var(--ink); letter-spacing: -0.3px; }
+    .nav-meta { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.5px; }
+
+    .page { max-width: 680px; margin: 0 auto; padding: 56px 24px 80px; }
+
+    .hero { text-align: center; margin-bottom: 48px; animation: fadeUp 0.5s ease both; }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 999px; padding: 4px 14px;
+      font-size: 12px; font-family: 'Geist Mono', monospace; color: var(--muted); margin-bottom: 20px;
+    }
+    .eyebrow-dot { width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+    .hero h1 { font-family: 'Instrument Serif', serif; font-size: clamp(36px, 6vw, 52px); font-weight: 400; letter-spacing: -1px; line-height: 1.1; color: var(--ink); margin-bottom: 14px; }
+    .hero h1 em { font-style: italic; color: var(--accent); }
+    .hero p { font-size: 15px; color: var(--muted); font-weight: 300; max-width: 360px; margin: 0 auto; }
+
+    .card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; animation: fadeUp 0.5s 0.1s ease both; margin-bottom: 24px; }
+    .card-body { padding: 28px; }
+
+    .field-group { margin-bottom: 16px; }
+    .field-label { display: block; font-size: 12px; font-weight: 500; color: var(--ink2); margin-bottom: 7px; letter-spacing: 0.1px; }
+    .field-input {
+      width: 100%; height: 44px;
+      background: var(--bg); border: 1px solid var(--border2);
+      border-radius: var(--radius-sm); padding: 0 14px;
+      font-family: 'Geist', sans-serif; font-size: 14px; color: var(--ink);
+      outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+    .field-input::placeholder { color: var(--muted); }
+    .field-input:focus { background: var(--white); border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .field-input.mono { font-family: 'Geist Mono', monospace; font-size: 13px; }
+
+    .alias-wrap { position: relative; }
+    .alias-prefix { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--muted); pointer-events: none; }
+    .alias-wrap .field-input { padding-left: 76px; }
+
+    .divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
+    .divider-line { flex: 1; height: 1px; background: var(--border); }
+    .divider-text { font-size: 11px; font-family: 'Geist Mono', monospace; color: var(--muted); letter-spacing: 0.5px; }
+
+    .submit-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+    .error-inline { font-size: 13px; color: var(--danger); display: none; align-items: center; gap: 6px; }
+    .error-inline.show { display: flex; }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--ink); color: var(--white);
+      border: none; border-radius: var(--radius-sm);
+      padding: 0 20px; height: 40px;
+      font-family: 'Geist', sans-serif; font-size: 14px; font-weight: 500;
+      cursor: pointer; transition: background 0.15s, transform 0.1s; white-space: nowrap;
+    }
+    .btn-primary:hover { background: var(--ink2); }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .result-panel {
+      background: var(--success-light); border-top: 1px solid #bbf7d0;
+      padding: 20px 28px; display: none; align-items: center; gap: 14px;
+    }
+    .result-panel.show { display: flex; }
+    .result-icon { width: 34px; height: 34px; background: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 15px; flex-shrink: 0; }
+    .result-info { flex: 1; min-width: 0; }
+    .result-label { font-size: 11px; font-weight: 500; color: var(--success); letter-spacing: 0.5px; margin-bottom: 2px; }
+    .result-short { font-family: 'Geist Mono', monospace; font-size: 15px; font-weight: 500; color: var(--ink); cursor: pointer; text-decoration: none; }
+    .result-short:hover { text-decoration: underline; }
+
+    .btn-copy { background: var(--white); border: 1px solid var(--border2); border-radius: var(--radius-xs); padding: 6px 14px; font-family: 'Geist Mono', monospace; font-size: 12px; font-weight: 500; color: var(--ink2); cursor: pointer; transition: background 0.15s, border-color 0.15s; white-space: nowrap; }
+    .btn-copy:hover { background: var(--bg); border-color: var(--ink); }
+    .btn-copy.copied { background: var(--success); border-color: var(--success); color: white; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 32px; animation: fadeUp 0.5s 0.15s ease both; }
+    .stat-box { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px 18px; box-shadow: var(--shadow-sm); }
+    .stat-value { font-family: 'Instrument Serif', serif; font-size: 28px; color: var(--ink); line-height: 1; margin-bottom: 4px; }
+    .stat-name { font-size: 12px; color: var(--muted); }
+
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .section-title { font-size: 13px; font-weight: 600; color: var(--ink2); }
+    .section-count { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--muted); background: var(--border); border-radius: 999px; padding: 2px 8px; }
+
+    .history-wrap { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden; animation: fadeUp 0.5s 0.2s ease both; }
+
+    .link-row { display: flex; align-items: center; gap: 14px; padding: 14px 20px; border-bottom: 1px solid var(--border); transition: background 0.1s; animation: rowIn 0.25s ease both; }
+    .link-row:last-child { border-bottom: none; }
+    .link-row:hover { background: var(--bg); }
+
+    .link-favicon { width: 30px; height: 30px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-xs); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; color: var(--muted); overflow: hidden; }
+    .link-favicon img { width: 16px; height: 16px; object-fit: contain; }
+
+    .link-info { flex: 1; min-width: 0; }
+    .link-short { font-family: 'Geist Mono', monospace; font-size: 13px; font-weight: 500; color: var(--accent); cursor: pointer; text-decoration: none; display: block; }
+    .link-short:hover { text-decoration: underline; }
+    .link-original { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+
+    .link-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .click-pill { font-family: 'Geist Mono', monospace; font-size: 11px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; }
+
+    .icon-btn { width: 28px; height: 28px; background: transparent; border: 1px solid transparent; border-radius: var(--radius-xs); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--muted); transition: background 0.15s, border-color 0.15s, color 0.15s; }
+    .icon-btn:hover { background: var(--bg); border-color: var(--border2); color: var(--ink); }
+    .icon-btn.delete:hover { background: var(--danger-light); border-color: #fca5a5; color: var(--danger); }
+
+    .empty { padding: 48px 24px; text-align: center; }
+    .empty-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.3; }
+    .empty-text { font-size: 14px; color: var(--muted); }
+
+    .overlay { position: fixed; inset: 0; background: rgba(247,246,242,0.95); backdrop-filter: blur(8px); z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+    .overlay.show { display: flex; }
+    .overlay-spinner { width: 36px; height: 36px; border: 2px solid var(--border2); border-top-color: var(--ink); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    .overlay-text { font-size: 15px; font-weight: 500; color: var(--ink); }
+    .overlay-url { font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted); max-width: 400px; text-align: center; word-break: break-all; }
+
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(60px); background: var(--ink); color: var(--white); font-size: 13px; font-weight: 500; padding: 10px 20px; border-radius: 999px; z-index: 200; pointer-events: none; transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); white-space: nowrap; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes rowIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+
+    @media (max-width: 520px) {
+      nav { padding: 0 20px; }
+      .page { padding: 36px 16px 60px; }
+      .card-body { padding: 20px; }
+      .result-panel { padding: 16px 20px; }
+      .stat-value { font-size: 22px; }
+      .link-meta .click-pill { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="#">
+    <div class="brand-mark">✂</div>
+    <span class="brand-name">Trimr</span>
+  </a>
+  <span class="nav-meta">v1.0 · local storage</span>
+</nav>
+
+<div class="overlay" id="overlay">
+  <div class="overlay-spinner"></div>
+  <div class="overlay-text">Redirecting…</div>
+  <div class="overlay-url" id="overlayUrl"></div>
+</div>
+
+<div class="page">
+  <div class="hero">
+    <div class="hero-eyebrow">
+      <span class="eyebrow-dot"></span>
+      No sign-up required
+    </div>
+    <h1>Make your links<br><em>shorter</em> &amp; cleaner</h1>
+    <p>Paste a long URL, get a clean short link. Tracks clicks. Works offline.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="field-group">
+        <label class="field-label" for="urlInput">Destination URL</label>
+        <input class="field-input mono" id="urlInput" type="url" placeholder="https://example.com/your-very-long-link-here" autocomplete="off" spellcheck="false"/>
+      </div>
+      <div class="divider">
+        <div class="divider-line"></div>
+        <span class="divider-text">Optional</span>
+        <div class="divider-line"></div>
+      </div>
+      <div class="field-group" style="margin-bottom:20px">
+        <label class="field-label" for="aliasInput">Custom alias</label>
+        <div class="alias-wrap">
+          <span class="alias-prefix">trimr.io/</span>
+          <input class="field-input mono" id="aliasInput" type="text" placeholder="my-link" maxlength="24" autocomplete="off" spellcheck="false"/>
+        </div>
+      </div>
+      <div class="submit-row">
+        <div class="error-inline" id="errorMsg">
+          <span>⚠</span><span id="errorText"></span>
+        </div>
+        <div style="flex:1"></div>
+        <button class="btn-primary" onclick="shortenUrl()">Shorten URL <span>→</span></button>
+      </div>
+    </div>
+    <div class="result-panel" id="resultPanel">
+      <div class="result-icon">✓</div>
+      <div class="result-info">
+        <div class="result-label">LINK READY</div>
+        <a class="result-short" id="resultShort" href="#" onclick="handleResultClick(event)"></a>
+      </div>
+      <button class="btn-copy" id="copyBtn" onclick="copyResult()">Copy</button>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="stat-value" id="statTotal">0</div>
+      <div class="stat-name">Links created</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" id="statClicks">0</div>
+      <div class="stat-name">Total clicks</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" id="statSaved">0</div>
+      <div class="stat-name">Chars saved</div>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <span class="section-title">Your links</span>
+    <span class="section-count" id="linkCount">0</span>
+  </div>
+  <div class="history-wrap" id="historyWrap">
+    <div class="empty" id="emptyState">
+      <div class="empty-icon">🔗</div>
+      <div class="empty-text">No links yet. Shorten something!</div>
+    </div>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const STORAGE_KEY = 'trimr_links';
+  const BASE = 'trimr.io/';
+
+  function getLinks() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
+  function saveLinks(l) { localStorage.setItem(STORAGE_KEY, JSON.stringify(l)); }
+
+  function randomCode(len = 7) {
+    const c = 'abcdefghjkmnpqrstuvwxyz23456789';
+    return Array.from({length:len}, () => c[Math.floor(Math.random()*c.length)]).join('');
+  }
+
+  function isValidUrl(s) {
+    try { const u = new URL(s); return u.protocol==='http:' || u.protocol==='https:'; }
+    catch { return false; }
+  }
+
+  function showError(msg) {
+    document.getElementById('errorText').textContent = msg;
+    document.getElementById('errorMsg').classList.add('show');
+  }
+  function clearError() { document.getElementById('errorMsg').classList.remove('show'); }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  function shortenUrl() {
+    clearError();
+    const url = document.getElementById('urlInput').value.trim();
+    const rawAlias = document.getElementById('aliasInput').value.trim();
+    const alias = rawAlias.toLowerCase().replace(/[^a-z0-9-]/g,'');
+
+    if (!url) { showError('Please enter a URL'); return; }
+    if (!isValidUrl(url)) { showError('Enter a valid URL starting with https://'); return; }
+
+    const links = getLinks();
+    const code = alias || randomCode();
+    if (links.find(l => l.code === code)) { showError('That alias is taken. Try another.'); return; }
+
+    const link = { code, original: url, short: BASE+code, clicks: 0, created: Date.now() };
+    links.unshift(link);
+    saveLinks(links);
+
+    const rs = document.getElementById('resultShort');
+    rs.textContent = link.short;
+    rs.dataset.code = code;
+    document.getElementById('resultPanel').classList.add('show');
+    document.getElementById('copyBtn').textContent = 'Copy';
+    document.getElementById('copyBtn').classList.remove('copied');
+    document.getElementById('urlInput').value = '';
+    document.getElementById('aliasInput').value = '';
+
+    renderHistory(); updateStats();
+    showToast('Link created');
+  }
+
+  function copyResult() {
+    navigator.clipboard.writeText(document.getElementById('resultShort').textContent).then(() => {
+      const b = document.getElementById('copyBtn');
+      b.textContent = 'Copied!'; b.classList.add('copied');
+      setTimeout(() => { b.textContent = 'Copy'; b.classList.remove('copied'); }, 2000);
+    });
+  }
+
+  function handleResultClick(e) {
+    e.preventDefault();
+    const code = e.target.dataset.code;
+    if (code) redirect(code);
+  }
+
+  function redirect(code) {
+    const links = getLinks();
+    const link = links.find(l => l.code === code);
+    if (!link) { showToast('Link not found'); return; }
+    link.clicks++; saveLinks(links); updateStats(); renderHistory();
+    document.getElementById('overlayUrl').textContent = link.original;
+    document.getElementById('overlay').classList.add('show');
+    setTimeout(() => { document.getElementById('overlay').classList.remove('show'); window.open(link.original,'_blank'); }, 1000);
+  }
+
+  function deleteLink(code) {
+    saveLinks(getLinks().filter(l => l.code !== code));
+    renderHistory(); updateStats(); showToast('Link deleted');
+  }
+
+  function copyLink(short) {
+    navigator.clipboard.writeText(short).then(() => showToast('Copied!'));
+  }
+
+  function getFavicon(url) {
+    try { return 'https://www.google.com/s2/favicons?domain=' + new URL(url).hostname + '&sz=32'; }
+    catch { return ''; }
+  }
+
+  function renderHistory() {
+    const links = getLinks();
+    const list = document.getElementById('historyList');
+    const empty = document.getElementById('emptyState');
+    document.getElementById('linkCount').textContent = links.length;
+
+    if (!links.length) { empty.style.display='block'; list.innerHTML=''; return; }
+    empty.style.display = 'none';
+
+    list.innerHTML = links.map((link, i) => `
+      <div class="link-row" style="animation-delay:${i*30}ms">
+        <div class="link-favicon">
+          <img src="${getFavicon(link.original)}" alt="" onerror="this.parentElement.textContent='🔗'"/>
+        </div>
+        <div class="link-info">
+          <a class="link-short" href="#" onclick="redirect('${link.code}');return false;">${link.short}</a>
+          <div class="link-original" title="${link.original}">${link.original}</div>
+        </div>
+        <div class="link-meta">
+          <span class="click-pill">${link.clicks} click${link.clicks!==1?'s':''}</span>
+          <button class="icon-btn" onclick="copyLink('${link.short}')" title="Copy">⎘</button>
+          <button class="icon-btn delete" onclick="deleteLink('${link.code}')" title="Delete">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function updateStats() {
+    const links = getLinks();
+    const clicks = links.reduce((s,l)=>s+l.clicks,0);
+    const saved = links.reduce((s,l)=>s+Math.max(0,l.original.length-l.short.length),0);
+    document.getElementById('statTotal').textContent = links.length;
+    document.getElementById('statClicks').textContent = clicks;
+    document.getElementById('statSaved').textContent = saved>999?(saved/1000).toFixed(1)+'k':saved;
+  }
+
+  document.getElementById('urlInput').addEventListener('keydown', e => { if(e.key==='Enter') shortenUrl(); });
+  renderHistory(); updateStats();
+</script>
+</body>
+</html>
